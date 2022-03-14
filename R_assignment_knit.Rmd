@@ -1,0 +1,302 @@
+---
+title: "R_Assignment"
+author: "Ann Murithi"
+date: "3/11/2022"
+output: html_document
+---
+Load all the packages required for this work
+```{r echo=FALSE, message=FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+```
+
+Load the two files to be used 
+```{r echo=FALSE, message=FALSE}
+fang_et_al <- read.delim("./fang_et_al_genotypes.txt", header=TRUE)
+snp <- read.delim("./snp_position.txt", header = TRUE)
+```
+
+#PART 1
+
+#DATA INSPECTION
+##Fang_et_al_genotypes.txt
+Check for
+  1. Data type
+  2. the class
+  3. Head and tail
+  4. Data dimension
+  5. Number of rows and colums
+  6. Data structure
+  7. using view to see the data table
+
+```{r echo=FALSE, message=FALSE}
+is.data.frame(fang_et_al)
+is.vector(fang_et_al)
+typeof(fang_et_al)
+head(fang_et_al) 
+tail(fang_et_al) 
+dim(fang_et_al) 
+nrow(fang_et_al) 
+ncol(fang_et_al) 
+str(fang_et_al) 
+names(fang_et_al) 
+sapply(fang_et_al, class) 
+View(fang_et_al)
+```
+
+##Snp_positions.txt
+Check for
+  1. Data type
+  2. the class
+  3. Head and tail
+  4. Data dimension
+  5. Number of rows and colums
+  6. Data structure
+  7. using view to see the data table
+  
+```{r echo=FALSE, message=FALSE}
+is.data.frame(snp)
+is.vector(snp)
+typeof(snp)
+head(snp)
+tail(snp)
+dim(snp) 
+nrow(snp) 
+ncol(snp) 
+str(snp) 
+names(snp) 
+sapply(snp, class) 
+View(snp)
+```
+#DATA PROCESSING
+
+##Snp_postion.txt
+
+  1. using snp_position.txt Create a new data frame by filtering SNP_ID, Chromosome and Position columns
+  2. Create an object called 'new_snp' containing the specifed columns
+  3. Quickly inspect the file by checking the number of columns and rows
+  
+```{r echo=FALSE, message=FALSE}
+new_snp <- snp[,c("SNP_ID", "Chromosome", "Position")] 
+ncol(new_snp)
+view(new_snp)
+write.table(new_snp, './Processing_files/new_snp.txt')
+```
+
+##Fang_et_al_genotype.txt
+
+  1. To create maize genotype
+  2. Filter third column "Group" using key words ZMMIL,ZMMLR and ZMMMR
+  3. Create an object called maize containg the filter
+  4. Quickly inspect the file by checking the number of columns and rows
+  5. repeat this step to create teosinte genotype files
+
+```{r echo=FALSE, message=FALSE}
+maize <- fang_et_al %>% filter(Group == "ZMMIL" | Group == "ZMMLR" | Group == "ZMMMR")
+nrow(maize)
+ncol(maize)
+write.table(maize, "./Processing_files/maize_extracted.txt")
+```
+
+##Creating teosinte genotype file
+
+```{r echo=FALSE, message=FALSE}
+teosinte <- fang_et_al %>% filter(Group == "ZMPBA" | Group == "ZMPIL" | Group == "ZMPJA")
+nrow(teosinte)
+ncol(teosinte)
+write.table(teosinte, "./Processing_files/teosinte_extracted.txt")
+```
+
+##Transposing and Joining
+Here:
+  1.  Transpose the maize genotype files and create a maize_transposed object
+  2.  Change the Sample_ID to SNP_ID
+  3. Join the transposed object with new_snp object
+  4. The save new object maize.f
+  5. Repeat the new steps for teosinte and create a new object teosinte.f
+
+```{r echo=FALSE, message=FALSE}
+maize_transposed <- t(maize[,-c(1:3)]) %>% as.data.frame()
+view(maize_transposed)
+write.table(maize_transposed, "./Processing_files/maize_transposed.txt")
+maize_transposed$SNP_ID <- rownames(maize_transposed)
+maize.f <- merge(new_snp,maize_transposed,by = 'SNP_ID')
+colnames(maize.f)[4:ncol(maize.f)] <- as.character(maize$Sample_ID)
+maize.f[,-c(1:3)] <- lapply(maize.f[,-c(1:3)],as.character)
+unique(maize.f$Chromosome)
+write.table(maize.f, "./Processing_files/maize_joined.txt")
+```
+
+##Creating teosinte transposed and joined file
+
+```{r echo=FALSE, message=FALSE}
+teosinte_transposed <- t(teosinte[,-c(1:3)]) %>% as.data.frame()
+write.table(teosinte_transposed, "./Processing_files/teosinte_transposed.txt")
+teosinte_transposed$SNP_ID <- rownames(teosinte_transposed)
+teosinte.f <- merge(new_snp,teosinte_transposed,by = 'SNP_ID')
+colnames(teosinte.f)[4:ncol(teosinte.f)] <- as.character(teosinte$Sample_ID)
+teosinte.f[,-c(1:3)] <- lapply(teosinte.f[,-c(1:3)],as.character)
+unique(teosinte.f$Chromosome)
+write.table(teosinte.f,"./Processing_files/teosinte_joined.txt")
+```
+
+##Extracting Chromosomes
+Here
+
+  1. Loop is used to create multiple files of chromosomes extracted from maize and teosinte joined files.
+    2. The script also incorporates arrange the files in ascending and descending order, as well as changing ?
+    3. Subset function is used to fileter chromosome and arrange in ascending order
+
+```{r echo=FALSE, message=FALSE}
+#MAIZE
+for (chr in 1:10) {
+  maize.chr <- subset(maize.f,Chromosome == chr) %>%
+    arrange(Position)  
+  maize.chr[maize.chr == '?/?'] <- '?' 
+  write.table(maize.chr,   
+              file = paste("./Maize/maize_chr",
+                           chr,"_Ascd.txt",sep = "")) 
+  maize.chr_d <- subset(maize.f,Chromosome == chr) %>%
+    arrange(desc(Position))
+  maize.chr_d[maize.chr_d == '?/?'] <- '-'
+  write.table(maize.chr_d,
+              file = paste("./Maize/maize_chr",chr,"_Desc.txt",sep = ""))
+  
+  #TEOSINTE
+  teosinte.chr <- subset(teosinte.f,Chromosome == chr) %>%
+    arrange(Position)
+  teosinte.chr[teosinte.chr == '?/?'] <- '?'
+  write.table(teosinte.chr,
+              file = paste("./Teosinte/teosinte_chr",chr,"_Ascd.txt",sep = ""))
+  teosinte.chr_d <- subset(teosinte.f,Chromosome == chr) %>%
+    arrange(desc(Position))
+  teosinte.chr_d[teosinte.chr_d == '?/?'] <- '-'
+  write.table(teosinte.chr_d,
+              file = paste("./Teosinte/teosinte_chr",chr,"_Desc.txt",sep = ""))
+}
+```
+#PART 2
+#Visualization
+
+##1.SNP Per Chromosome
+###1a.Plotting SNP counts per chromosome_All
+Here:
+  1. Filter the original SNP file by position and specify less than inf
+  2. Pipe the filtering to create a bar graph of total counts of SNPs per chromosome
+  3. Give the X-axis and the y-axis a label
+
+
+```{r echo=FALSE, message=FALSE}
+snp %>% 
+  filter(Position < 10e1000) %>% 
+  ggplot(aes(as.double(Chromosome))) +
+  geom_bar(fill = 'blue', color = 'green') + 
+  geom_text(stat = 'count', aes(label = ..count..), vjust = -1) +
+  scale_x_continuous(breaks = 1:10) +
+  theme_replace() +
+  ggtitle("SNPs count/CHR") +
+  ylab('Number of SNPs') +
+  xlab('CHR') 
+ggsave('./Visualization/SNPs_number.png')
+
+```
+
+###1b. Plotting SNP distribution across the chromosome _All
+Here
+  1. filter the position for anything less than inf and map them to position/1000000, which is in double class
+  2. Pipe this to create histogram SNP distribution in a chromosome and fill the histogram with green color
+  3. Use facet Wrap to plot each chromosome
+  4. Give the X-axis and the y-axis a label
+  
+```{r echo=FALSE, message=FALSE}
+snp %>% filter(Position < 10e1000) %>% 
+  ggplot(aes(as.double(Position)/1000000)) +
+  geom_histogram(aes(y = ..density..), color = 'green', fill = "green", alpha = 0.4, bins = 20) + 
+  geom_density(aes(as.double(Position)/1000000), color = "blue") + 
+  facet_wrap(~ as.double(Chromosome), scales = "free") +
+  theme_replace() +
+  ggtitle("Across Chromosomes distribution") +
+  xlab('Position (Mb)') +
+  ylab('SNP density')
+ggsave(paste0("./Visualization/SNPs_distribution.png"))
+
+```
+
+##2.Missing data and amount of heterozygosity
+
+###2a. Proportion of homozygous and Hets by sample #
+
+  1. Remove the 2nd tha the 3rd column in fang_et_al and pipe it pivot_long by Sample_ID, to create a tibble of each SNP and its genotypic value 
+  2. Mutate the file to add a colum with Homozygous and hetrozygous SNPs defined
+
+```{r echo=FALSE, message=FALSE}
+mutate_genotypes <- 
+  fang_et_al %>% select(-JG_OTU, -Group) %>%   
+  pivot_longer(!Sample_ID) %>% 
+  mutate(Allele = ifelse(value %in% c('C/C', 'G/G', 'A/A', 'T/T'), 'Homozygote', ifelse(value == '?/?', 'NA', 'Heterozygote')))  
+
+```
+
+###Plotting by Sample
+
+```{r echo=FALSE, message=FALSE}
+color1 <- brewer.pal(3, "Set1")
+mutate_genotypes %>% group_by(Sample_ID) %>%  count(Allele) %>% 
+  ggplot(aes(fill = Allele, y = n, x = Sample_ID)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_manual(values = color1) +
+  ggtitle("Proportion of Homozygotes, Heterozygotes and Missing Data by Sample") +
+  ylab('Proportion') +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+ggsave('./Visualization/Allelic_proportion_by_sample.png')
+```
+
+##2b. Proportion of homozygous and Hets by Group #
+  1. Remove the 1st and the 2nd column in fang_et_al and pipe it to pivot_long by Group, to create a tibble of each group and its genotypic value 
+  2.  Mutate the file to add a column with Homozygous and Hetrozygous SNPs defined
+  
+```{r echo=FALSE, message=FALSE}
+mutate_groups <- 
+  fang_et_al %>% select(-Sample_ID, -JG_OTU) %>%   
+  pivot_longer(!Group) %>% 
+  mutate(Allele = ifelse(value %in% c('C/C', 'G/G', 'A/A', 'T/T'), 'Homozygote', ifelse(value == '?/?', 'NA', 'Heterozygote')))  
+
+```
+
+###Plot by group
+
+```{r echo=FALSE, message=FALSE}
+mutate_groups %>% group_by(Group) %>%  count(Allele) %>% 
+  ggplot(aes(fill = Allele, y = n, x = Group)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_manual(values = color1) +
+  ggtitle("Proportion of Homozygotes, Heterozygotes and Missing Data by Group") +
+  ylab('Proportion') 
+ggsave('./Visualization/Allelic_Proportion_by_group.jpg')
+```
+
+##3 Own_Plot: Plotting by Sample
+
+```{r echo=FALSE, message=FALSE}
+color2 <- brewer.pal(6, "Spectral")
+mutate_groups %>% filter(Allele == "Heterozygote") %>% group_by(Group) %>%  count(value) %>% 
+  ggplot(aes(fill = value, y = n, x = Group)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_manual(values = color2) +
+  ggtitle("Proportion Heterozygote sites in each group") +
+  ylab('Proportion') +
+  theme_bw()
+ggsave('./Visualization/Last_exercise.png')
+```
+
+
+
+
+
+
+
+
