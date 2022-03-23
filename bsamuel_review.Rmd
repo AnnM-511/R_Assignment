@@ -1,0 +1,25 @@
+---
+title: "bsamuel_review.Rmd"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```
+Your code ran without any interuption in my computer.
+You inspected the data well.
+Placing files within folders made it easy to access them.
+Good thinking with mapping position/1 million for visualization of snps distribution accross chromosomes. This made it look neat.
+The x-axis in the graphs with groups have overlapping labels. Otherwise they look good.
+Overall, the data inspection was thorough, processing and visualization of the data was well explained. Good work with the assignment!
+```
+
+
+
+
+
+
